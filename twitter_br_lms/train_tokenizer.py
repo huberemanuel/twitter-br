@@ -28,7 +28,7 @@ def train_roberta(train_data: DataLoader, output_path: str, vocab_size: int):
 
     # Save files to disk
     Path(output_path).mkdir(exist_ok=True)
-    tokenizer.save_model(output_path, "roberta")
+    tokenizer.save_model(output_path, "roberta-tokenizer")
 
 
 def main():
