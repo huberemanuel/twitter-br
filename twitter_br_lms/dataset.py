@@ -23,7 +23,7 @@ class LMDataset(Dataset):
         base_path: str
             Path to the actual CSV file or to the base folder of the project,
             in ths case is expected to find a `processed` dir insise base_path.
-        tokenizer: AutoTokenizer
+        tokenizer: Optional[AutoTokenizer]
             Tokenizer used on sample retrievals.
         n_samples: Optional[int]
             If passed, only retrieves n_samples samples from the dataset.
@@ -99,5 +99,6 @@ class LMDataset(Dataset):
         torch.Tensor
             Tensor containing all token ids.
         """
-        input_ids = self._tokenize(self.samples[i], padding, max_seq_length)["input_ids"].squeeze()
-        return input_ids
+        if self.tokenizer:
+            return self._tokenize(self.samples[i], padding, max_seq_length)["input_ids"].squeeze()
+        return self.samples[i]

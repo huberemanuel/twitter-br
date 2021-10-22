@@ -52,6 +52,14 @@ filter-pt-br:
 		--model_name "lid.176.bin" \
 		--output_path $(INTERIM_DATA_DIR)
 
+train-tokenizer:
+	python3 -m twitter_br_lms.train_tokenizer \
+		--train_file $(PROCESSED_DATA_DIR)/train.csv \
+		--output_path $(MODELS_DIR)/$(tokenizer) \
+		--tokenizer $(tokenizer) \
+		--vocab_size 50200 \
+		--uncased
+
 roberta-train-check:
 	python3 -m twitter_br_lms.mlm \
 		--output_dir $(MODELS_DIR)/twitter-br \
