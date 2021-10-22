@@ -41,7 +41,8 @@ split_data:
 	# Create train/val splits
 	python3 -m twitter_br_lms.split_data \
 		--data_path $(INTERIM_DATA_DIR) \
-		--output_path $(PROCESSED_DATA_DIR)
+		--output_path $(PROCESSED_DATA_DIR) \
+		--drop_duplicates
 
 filter-pt-br:
 	# Filter pt-br tweets from raw datasets

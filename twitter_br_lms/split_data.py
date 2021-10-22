@@ -33,6 +33,12 @@ def main():
         " will be used as the test size.",
         default=0.9,
     )
+    parser.add_argument(
+        "--drop_duplicates",
+        action="store_true",
+        default=False,
+        help="If set the pandas.drop_duplicates will be executed, this may take a while to finish",
+    )
     parser.add_argument("--seed", type=int, help="Default seed used in pandas random state", default=42)
     args = parser.parse_args()
 
@@ -54,6 +60,11 @@ def main():
         samples += df["text"].to_list()
 
     df = pd.DataFrame(samples, columns=["text"])
+
+    if args.drop_duplicates:
+        print("Dropping duplicates... go grab a ☕")
+        df = df.drop_duplicates(subset=["text"])
+
     train_df = df.sample(frac=args.train_frac, random_state=args.seed)
     val_df = df.drop(train_df.index)
 
