@@ -1,0 +1,100 @@
+RAW_DATA_DIR = $(shell pwd)/twitter_br_lms/data/raw
+INTERIM_DATA_DIR = $(shell pwd)/twitter_br_lms/data/interim
+PROCESSED_DATA_DIR = $(shell pwd)/twitter_br_lms/data/processed
+MODELS_DIR = $(shell pwd)/twitter_br_lms/models
+CACHE_DIR = ~/.cache/twitter-br
+
+init:
+	mkdir -p $(CACHE_DIR)
+	wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin -O $(CACHE_DIR)/lid.176.bin
+	pip install -r requirements.txt
+	pip install -e .
+
+download_all: download_ptsa download_ttsbr download_j2015_2016 download_covid19_4m download_brasnam2018
+	gshell init
+	echo "Downloading all data"
+
+download_ptsa:
+	# Download PortugueseTweetsforSentimentAnalysis
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1MoV2LpJjWroBt7sHoujFPMS-ap8pcNGs --recursive
+
+download_ttsbr:
+	# Download TweetSentsBR
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --reursive
+
+download_j2015_2016:
+	# Download Joao2015-20016
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --reursive
+
+download_covid19_4m:
+	# Download COVID19-4M
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1FvTXR7uPo0jtkBQ01B8ED5fYNuS0skkM --reursive
+
+download_brasnam2018:
+	# Download BraSNAM2018
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1OD_Xr8ijs6HJyQGUMB9Nws4me3E-4hOj --reursive
+
+split_data:
+	# Create train/val splits
+	python3 -m twitter_br_lms.split_data \
+		--data_path $(INTERIM_DATA_DIR) \
+		--output_path $(PROCESSED_DATA_DIR)
+
+filter-pt-br:
+	# Filter pt-br tweets from raw datasets
+	python3 -m twitter_br_lms.filter_lang \
+		--data_path $(RAW_DATA_DIR) \
+		--cache_dir $(CACHE_DIR) \
+		--model_name "lid.176.bin" \
+		--output_path $(INTERIM_DATA_DIR)
+
+roberta-train-check:
+	python3 -m twitter_br_lms.mlm \
+		--output_dir $(MODELS_DIR)/twitter-br \
+		--train_file $(PROCESSED_DATA_DIR)/train.csv \
+		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
+		--model_name_or_path roberta-base \
+		--tokenizer_name roberta-base \
+		--preprocessing_num_workers 8 \
+		--do_train \
+		--seed 42 \
+		--overwrite_output_dir \
+		--per_device_train_batch_size 16 \
+		--save_total_limit 3 \
+		--eval_accumulation_steps 100 \
+		--fp16 \
+		--max_train_samples 100 \
+		--max_eval_samples 100 \
+		--num_train_epochs 1 \
+		--debugging
+
+roberta-train:
+	python3 -m twitter_br_lms.mlm \
+		--output_dir $(MODELS_DIR)//twitter-br \
+		--train_file .$(PROCESSED_DATA_DIR)train.csv \
+		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
+		--model_name_or_path roberta-base \
+		--tokenizer_name roberta-base \
+		--preprocessing_num_workers 8 \
+		--do_eval \
+		--seed 42 \
+		--overwrite_output_dir \
+		--per_device_train_batch_size 16 \
+		--save_total_limit 3 \
+		--eval_accumulation_steps 100 \
+		--fp16
+
+roberta-eval:
+	python3 -m twitter_br_lms.mlm \
+		--model_name_or_path $(MODELS_DIR)/twitter-br \
+		--train_file $(PROCESSED_DATA_DIR)/train.csv \
+		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
+		--tokenizer_name roberta-base \
+		--preprocessing_num_workers 8 \
+		--do_eval \
+		--seed 42 \
+		--per_device_train_batch_size 16 \
+		--save_total_limit 3 \
+		--eval_accumulation_steps 100 \
+		--fp16 \
+		--output_dir $(MODELS_DIR)/

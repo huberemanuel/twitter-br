@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode
+!twitter_br_lms/data/**/.gitkeep
+!twitter_br_lms/models/.gitkeep
+twitter_br_lms/models/
+twitter_br_lms/data
