@@ -10,8 +10,7 @@ init:
 	pip install -r requirements.txt
 	pip install -e .
 
-download_all: download_ptsa download_ttsbr download_j2015_2016 download_covid19_4m download_brasnam2018
-	gshell init
+download_all: download_ptsa download_ttsbr download_j2015_2016 download_covid19_4m download_brasnam2018 download_def
 	echo "Downloading all data"
 
 download_ptsa:
@@ -20,19 +19,23 @@ download_ptsa:
 
 download_ttsbr:
 	# Download TweetSentsBR
-	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --reursive
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --recursive
 
 download_j2015_2016:
 	# Download Joao2015-20016
-	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --reursive
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1H1v3H2a_rhJ9Mg4bJ3wz4WsfPbnS5iXK --recursive
 
 download_covid19_4m:
 	# Download COVID19-4M
-	cd $(RAW_DATA_DIR) && gshell download --with-id 1FvTXR7uPo0jtkBQ01B8ED5fYNuS0skkM --reursive
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1FvTXR7uPo0jtkBQ01B8ED5fYNuS0skkM --recursive
 
 download_brasnam2018:
 	# Download BraSNAM2018
-	cd $(RAW_DATA_DIR) && gshell download --with-id 1OD_Xr8ijs6HJyQGUMB9Nws4me3E-4hOj --reursive
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1OD_Xr8ijs6HJyQGUMB9Nws4me3E-4hOj --recursive
+
+download_def:
+	# Download Tweets sobre deficiencia
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1eHzQMx1_TFJVkUW318_GQfoav-Urs4k6 --recursive
 
 split_data:
 	# Create train/val splits
