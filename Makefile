@@ -62,11 +62,11 @@ train-tokenizer:
 
 roberta-train-check:
 	python3 -m twitter_br_lms.mlm \
-		--output_dir $(MODELS_DIR)/twitter-br \
+		--output_dir $(MODELS_DIR)/roberta \
 		--train_file $(PROCESSED_DATA_DIR)/train.csv \
 		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
 		--model_name_or_path roberta-base \
-		--tokenizer_name roberta-base \
+		--tokenizer_name $(MODELS_DIR)/roberta-tokenizer \
 		--preprocessing_num_workers 8 \
 		--do_train \
 		--seed 42 \
@@ -78,15 +78,16 @@ roberta-train-check:
 		--max_train_samples 100 \
 		--max_eval_samples 100 \
 		--num_train_epochs 1 \
+		--max_seq_length 512 \
 		--debugging
 
 roberta-train:
 	python3 -m twitter_br_lms.mlm \
-		--output_dir $(MODELS_DIR)//twitter-br \
-		--train_file .$(PROCESSED_DATA_DIR)train.csv \
+		--output_dir $(MODELS_DIR)/roberta \
+		--train_file $(PROCESSED_DATA_DIR)/train.csv \
 		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
 		--model_name_or_path roberta-base \
-		--tokenizer_name roberta-base \
+		--tokenizer_name $(MODELS_DIR)/roberta-tokenizer \
 		--preprocessing_num_workers 8 \
 		--do_eval \
 		--seed 42 \
@@ -94,6 +95,7 @@ roberta-train:
 		--per_device_train_batch_size 16 \
 		--save_total_limit 3 \
 		--eval_accumulation_steps 100 \
+		--max_seq_length 512 \
 		--fp16
 
 roberta-eval:
@@ -101,7 +103,7 @@ roberta-eval:
 		--model_name_or_path $(MODELS_DIR)/twitter-br \
 		--train_file $(PROCESSED_DATA_DIR)/train.csv \
 		--validation_file $(PROCESSED_DATA_DIR)/val.csv \
-		--tokenizer_name roberta-base \
+		--tokenizer_name $(MODELS_DIR)/roberta-tokenizer \
 		--preprocessing_num_workers 8 \
 		--do_eval \
 		--seed 42 \

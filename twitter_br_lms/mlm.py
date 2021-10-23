@@ -9,15 +9,18 @@ import logging
 import math
 import os
 import sys
+from pathlib import Path
 
 import datasets
 import transformers
+from tokenizers import ByteLevelBPETokenizer
 from transformers import (
     AutoConfig,
     AutoModelForMaskedLM,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     HfArgumentParser,
+    RobertaTokenizerFast,
     Trainer,
     TrainingArguments,
     set_seed,
@@ -88,7 +91,16 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    if model_args.tokenizer_name:
+    if Path(model_args.tokenizer_name).exists():
+        if "roberta" in model_args.tokenizer_name:
+            tokenizer = RobertaTokenizerFast(
+                vocab_file=str(Path(model_args.tokenizer_name).joinpath("roberta-vocab.json")),
+                merges_file=str(Path(model_args.tokenizer_name).joinpath("roberta-merges.txt")),
+            )
+        else:
+            raise ValueError("Tokenizer does not exist in the path {}".format(model_args.tokenizer_name))
+        tokenizer.model_max_length = data_args.max_seq_length
+    elif model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
         tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
