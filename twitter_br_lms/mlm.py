@@ -115,7 +115,7 @@ def main():
         data_args.train_file, tokenizer, n_samples=data_args.max_train_samples, debugging=data_args.debugging
     )
     eval_dataset = LMDataset(
-        data_args.validation_file, tokenizer, n_samples=data_args.max_train_samples, debugging=data_args.debugging
+        data_args.validation_file, tokenizer, n_samples=data_args.max_eval_samples, debugging=data_args.debugging
     )
 
     config_kwargs = {
