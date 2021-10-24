@@ -89,13 +89,17 @@ roberta-train:
 		--model_name_or_path roberta-base \
 		--tokenizer_name $(MODELS_DIR)/roberta-tokenizer \
 		--preprocessing_num_workers 8 \
-		--do_eval \
+		--do_train \
 		--seed 42 \
 		--overwrite_output_dir \
 		--per_device_train_batch_size 16 \
 		--save_total_limit 3 \
 		--eval_accumulation_steps 100 \
 		--max_seq_length 512 \
+		--evaluation_strategy "steps" \
+		--eval_steps 250000 \
+		--max_train_samples 40000000 \
+		--max_eval_samples 400000 \
 		--fp16
 
 roberta-eval:
