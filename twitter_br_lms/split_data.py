@@ -7,6 +7,9 @@ from tqdm.auto import tqdm
 from twitter_br_lms.args import SmartFormatter
 
 
+MAX_TWEETS_DATASET = 30_000_000  # Max tweets to get from a single file.
+
+
 def main():
     parser = argparse.ArgumentParser(
         "Split interim datasets into train and validation sets", formatter_class=SmartFormatter
@@ -24,7 +27,10 @@ def main():
                 random_name.csv""",
     )
     parser.add_argument(
-        "--output_path", type=str, help="Output path that processed CSVs are going to be stored.", default="."
+        "--output_path",
+        type=str,
+        help="Output path that processed CSVs are going to be stored.",
+        default=".",
     )
     parser.add_argument(
         "--train_frac",
@@ -39,7 +45,9 @@ def main():
         default=False,
         help="If set the pandas.drop_duplicates will be executed, this may take a while to finish",
     )
-    parser.add_argument("--seed", type=int, help="Default seed used in pandas random state", default=42)
+    parser.add_argument(
+        "--seed", type=int, help="Default seed used in pandas random state", default=42
+    )
     args = parser.parse_args()
 
     data_path = Path(args.data_path)
@@ -57,6 +65,10 @@ def main():
 
     for input_file in tqdm(input_files, desc="Splitting interim data into train and val sets"):
         df = pd.read_csv(input_file, header=0, names=["text"])
+
+        if len(df) > MAX_TWEETS_DATASET:
+            df = df.sample(MAX_TWEETS_DATASET)
+
         samples += df["text"].to_list()
 
     df = pd.DataFrame(samples, columns=["text"])
