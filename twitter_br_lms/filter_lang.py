@@ -76,9 +76,17 @@ if __name__ == "__main__":
         help="Path to the output dir where filtered CSVs will be stored",
         default=resource_filename(twitter_br_lms.__name__, "data/interim"),
     )
-    parser.add_argument("--cache_dir", type=str, help="Path to the default cache dir.", default="~/.cache/twitter-br")
     parser.add_argument(
-        "--model_name", type=str, help="Name of fasttext model to be found at `cache_dir`", default="lid.176.bin"
+        "--cache_dir",
+        type=str,
+        help="Path to the default cache dir.",
+        default="~/.cache/twitter-br",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        help="Name of fasttext model to be found at `cache_dir`",
+        default="lid.176.bin",
     )
     args = parser.parse_args()
 
@@ -86,7 +94,10 @@ if __name__ == "__main__":
     model = LanguageIdentification(str(model_path))
     base_path = Path(args.data_path)
     output_path = Path(args.output_path)
-    input_files = list(base_path.glob("**/*.csv"))
+    if base_path.is_file():
+        input_files = [base_path]
+    else:
+        input_files = list(base_path.glob("**/*.csv"))
 
     for input_file in tqdm(input_files, desc="Filtering portuguese tweets"):
         df = pd.read_csv(input_file, header=0, names=["text"])

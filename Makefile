@@ -56,6 +56,14 @@ filter-pt-br:
 		--model_name "lid.176.bin" \
 		--output_path $(INTERIM_DATA_DIR)
 
+filter-pt-br-file: $(file_path)
+	# Filter a single file
+	python3 -m twitter_br_lms.filter_lang \
+		--data_path $(file_path) \
+		--cache_dir $(CACHE_DIR) \
+		--model_name "lid.176.bin" \
+		--output_path $(INTERIM_DATA_DIR)
+
 train-tokenizer:
 	python3 -m twitter_br_lms.train_tokenizer \
 		--train_file $(PROCESSED_DATA_DIR)/train.csv \
