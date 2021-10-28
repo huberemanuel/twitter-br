@@ -10,8 +10,12 @@ init:
 	pip install -r requirements.txt
 	pip install -e .
 
-download_all: download_ptsa download_ttsbr download_j2015_2016 download_covid19_4m download_brasnam2018 download_def
+download_all: download_ptsa download_ttsbr download_j2015_2016 download_covid19_4m download_brasnam2018 download_def download_mariocovid19
 	echo "Downloading all data"
+
+download_mariocovid19:
+	# Download MarioCOVID19
+	cd $(RAW_DATA_DIR) && gshell download --with-id 1WKUZGMurOlWSm4k-oO40xAWL2l2l0EC8 --recursive
 
 download_ptsa:
 	# Download PortugueseTweetsforSentimentAnalysis
