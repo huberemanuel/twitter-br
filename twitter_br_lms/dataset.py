@@ -38,7 +38,7 @@ class LMDataset(Dataset):
         if uncased:
             df["text"] = df["text"].str.lower()
 
-        if n_samples:
+        if n_samples and len(df) < n_samples:
             df = df.sample(n_samples)
 
         self.samples = df["text"].to_list()
