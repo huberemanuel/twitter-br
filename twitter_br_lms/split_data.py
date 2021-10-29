@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
@@ -61,17 +62,21 @@ def main():
 
     input_files = list(data_path.glob("**/*.csv"))
 
-    samples = []
+    samples = defaultdict(list)
 
     for input_file in tqdm(input_files, desc="Splitting interim data into train and val sets"):
+        dataset_name = Path(input_file).parent
         df = pd.read_csv(input_file, header=0, names=["text"])
 
-        if len(df) > MAX_TWEETS_DATASET:
-            df = df.sample(MAX_TWEETS_DATASET)
+        samples[dataset_name] += df["text"].to_list()
 
-        samples += df["text"].to_list()
+    sentences = []
+    for dataset, tweets in samples.items():
+        if len(tweets) > MAX_TWEETS_DATASET:
+            samples[dataset] = pd.DataFrame(tweets).sample(MAX_TWEETS_DATASET)[0].to_list()
+        sentences += samples[dataset]
 
-    df = pd.DataFrame(samples, columns=["text"])
+    df = pd.DataFrame(sentences, columns=["text"])
 
     if args.drop_duplicates:
         print("Dropping duplicates... go grab a ☕")
