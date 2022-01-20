@@ -67,7 +67,7 @@ filter-pt-br-file: $(file_path)
 train-tokenizer:
 	python3 -m twitter_br_lms.train_tokenizer \
 		--train_file $(PROCESSED_DATA_DIR)/train.csv \
-		--output_path $(MODELS_DIR)/$(tokenizer) \
+		--output_path $(MODELS_DIR)/$(tokenizer)-tokenizer \
 		--tokenizer $(tokenizer) \
 		--vocab_size 50200 \
 		--uncased
