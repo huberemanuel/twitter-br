@@ -223,6 +223,10 @@ def main():
     else:
         trainer.create_model_card(**kwargs)
 
+def _mp_fn(index):
+    # For xla_spawn (TPUs)
+    main()
+
 
 if __name__ == "__main__":
     main()
