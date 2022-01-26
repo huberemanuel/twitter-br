@@ -33,7 +33,7 @@ class LMDataset(Dataset):
             Wheter load only 100 data samples for debugging purposes.
         """
         self.tokenizer = tokenizer
-        df = pd.read_csv(file_path, header=0, names=["text"], nrows=100 if debugging else None)
+        df = pd.read_csv(file_path, header=None, names=["text"], nrows=100 if debugging else None)
 
         if uncased:
             df["text"] = df["text"].str.lower()
