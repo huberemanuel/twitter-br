@@ -66,7 +66,7 @@ def removeruidos(example):
     return example
 
 
-def load_and_prepare_dataset(dataset_name: str, model_name: str, do_preprocess: bool = True):
+def load_and_prepare_dataset(dataset_name: str, a_model_name: str, b_model_name: str, do_preprocess: bool = True):
 
     dataset = load_dataset(f"Emanuel/{dataset_name}", use_auth_token=True)
     # Cleaning datasets
@@ -82,28 +82,66 @@ def load_and_prepare_dataset(dataset_name: str, model_name: str, do_preprocess: 
 
     label_encoder = ClassLabel(num_classes=num_labels, names=labels)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, use_auth_token=True, from_flax=True)
+    a_tokenizer = AutoTokenizer.from_pretrained(a_model_name, do_lower_case=False, use_auth_token=True, from_flax=True)
+    b_tokenizer = AutoTokenizer.from_pretrained(b_model_name, do_lower_case=False, use_auth_token=True, from_flax=True)
 
     def tokenize_function(examples):
         # TODO: get max_length from model
-        tokenized_batch = tokenizer(examples["text"], max_length=140, padding="max_length", truncation=True)
-        tokenized_batch["label"] = [label_encoder.str2int(str(x)) for x in examples["label"]]
+        tokenized_batch = a_tokenizer(examples["text"], max_length=140, padding="max_length", truncation=True)
+        # tokenized_batch["label"] = [label_encoder.str2int(str(x)) for x in examples["label"]]
+        tokenized_batch["label"] = nn.functional.one_hot(torch.tensor(examples["label"])).numpy()
+        tokenized_batch["input_ids_a"] = tokenized_batch["input_ids"]
+        tokenized_batch["input_ids_b"] = b_tokenizer(
+            examples["text"], max_length=140, padding="max_length", truncation=True
+        )["input_ids"]
         return tokenized_batch
 
     tokenized_datasets = dataset.map(tokenize_function, batched=True)
 
     # small_train_dataset = tokenized_datasets["train"].shuffle(seed=42).select(range(500))
     # small_eval_dataset = tokenized_datasets["test"].shuffle(seed=42).select(range(500))
-    # TODO: crossvalidation
     full_train_dataset = tokenized_datasets["train"]
     full_eval_dataset = tokenized_datasets["test"]
     return full_train_dataset, full_eval_dataset, num_labels
 
 
-def load_model(model_name: str, num_labels: int):
-    return AutoModelForSequenceClassification.from_pretrained(
-        model_name, num_labels=num_labels, use_auth_token=True, from_flax=True
-    )
+class CombinedNet(nn.Module):
+    def __init__(self, a_model_name: str, b_model_name: str, num_labels: int):
+        super(CombinedNet, self).__init__()
+        self.model_a = AutoModel.from_pretrained(a_model_name, use_auth_token=True, from_flax=True)
+        self.model_b = AutoModel.from_pretrained(b_model_name, use_auth_token=True, from_flax=True)
+        # for param in self.model_a.parameters():
+        #     param.requires_grad = False
+        # for param in self.model_b.parameters():
+        #     param.requires_grad = False
+
+        size = 768 + 768
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=0.1),
+            # nn.Linear(768, 768, bias=True),
+            nn.Linear(size, size, bias=True),
+            # nn.Tanh(),
+            nn.ReLU(),
+            nn.Dropout(p=0.1),
+            nn.Linear(size, num_labels, bias=True),
+        )
+
+    def forward(self, input_ids, input_ids_a, input_ids_b, attention_mask, labels, token_type_ids):
+        logits_a = self.model_a(
+            input_ids_a, attention_mask=attention_mask, token_type_ids=token_type_ids
+        ).last_hidden_state[:, 0, :]
+        logits_b = self.model_b(input_ids_b, attention_mask=attention_mask).last_hidden_state[:, 0, :]
+
+        concatenated_vectors = torch.concat((logits_a, logits_b), axis=1)
+        # concatenated_vectors = torch.stack((logits_a, logits_b))
+        output = self.classifier(concatenated_vectors)
+        loss_fct = nn.BCEWithLogitsLoss()
+        loss = loss_fct(output, labels.float())
+        return output, loss
+
+
+def load_model(a_model_name: str, b_model_name: str, num_labels: int):
+    return CombinedNet(a_model_name, b_model_name, num_labels)
 
 
 def compute_metrics(eval_pred):
@@ -121,7 +159,7 @@ def compute_metrics(eval_pred):
 
 def main():
     # Setup experiment
-    seed = 43  # 2020, 42, 43
+    seed = 7  # 2020, 42, 43
     torch.backends.cudnn.deterministic = True
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
@@ -141,7 +179,7 @@ def main():
     save_total_limit = 3
 
     # other params
-    epochs = 15
+    epochs = 20
     learning_rate = 2e-5
     batch_size = 24
 
@@ -151,6 +189,8 @@ def main():
     bert_base = "neuralmind/bert-base-portuguese-cased"
     bert_large = "neuralmind/bert-large-portuguese-cased"
     selected_model = ttbr_base_v3
+    a_model = bert_base
+    b_model = ttbr_base_v3
 
     # eleicoes2018
     # covid19-desinformation
@@ -158,7 +198,8 @@ def main():
     # tt-depression
     dataset_name = "covid19-fakenews"
 
-    full_train_dataset, full_eval_dataset, num_labels = load_and_prepare_dataset(dataset_name, selected_model)
+    # full_train_dataset, full_eval_dataset, num_labels = load_and_prepare_dataset(dataset_name, selected_model)
+    full_train_dataset, full_eval_dataset, num_labels = load_and_prepare_dataset(dataset_name, a_model, b_model)
     # Teste my own training routine
     full_train_dataset = full_train_dataset.remove_columns(["text"])
     full_eval_dataset = full_eval_dataset.remove_columns(["text"])
@@ -174,8 +215,8 @@ def main():
     train_dataloader = DataLoader(full_train_dataset, shuffle=True, batch_size=batch_size)
     eval_dataloader = DataLoader(full_eval_dataset, batch_size=batch_size)
 
-    model = load_model(selected_model, num_labels)
-    model.config.hidden_dropout = 0.99
+    model = load_model(a_model, b_model, num_labels)
+    # model.config.hidden_dropout = 0.99
 
     # from torch.optim import AdamW
     from transformers import get_scheduler
@@ -206,18 +247,20 @@ def main():
         acc = load_metric("accuracy")
         for batch in train_dataloader:
             batch = {k: v.to(device) for k, v in batch.items()}
-            outputs = model(**batch)
+            outputs, loss = model(**batch)
             # loss_func = nn.BCEWithLogitsLoss()
-            loss = outputs.loss
+            # loss = outputs.loss
             loss.backward()
 
             optimizer.step()
             lr_scheduler.step()
             optimizer.zero_grad()
             progress_bar.update(1)
-            predictions = torch.argmax(outputs.logits, dim=-1)
-            metric.add_batch(predictions=predictions, references=batch["labels"])
-            acc.add_batch(predictions=predictions, references=batch["labels"])
+            # predictions = torch.argmax(outputs.logits, dim=-1)
+            predictions = torch.argmax(outputs, dim=-1)
+            references = torch.argmax(batch["labels"], dim=-1)
+            metric.add_batch(predictions=predictions, references=references)
+            acc.add_batch(predictions=predictions, references=references)
         f_score = metric.compute(average="macro")
         acc_score = acc.compute()
         print("Training: ", f_score, acc_score)
@@ -229,19 +272,21 @@ def main():
         for batch in eval_dataloader:
             batch = {k: v.to(device) for k, v in batch.items()}
             with torch.no_grad():
-                outputs = model(**batch)
+                outputs, loss = model(**batch)
 
-            logits = outputs.logits
-            predictions = torch.argmax(logits, dim=-1)
-            metric.add_batch(predictions=predictions, references=batch["labels"])
-            acc.add_batch(predictions=predictions, references=batch["labels"])
+            # logits, = outputs.logits
+            # predictions = torch.argmax(logits, dim=-1)
+            predictions = torch.argmax(outputs, dim=-1)
+            references = torch.argmax(batch["labels"], dim=-1)
+            metric.add_batch(predictions=predictions, references=references)
+            acc.add_batch(predictions=predictions, references=references)
             preds += predictions.detach().cpu().tolist()
             labels += batch["labels"].detach().cpu().tolist()
 
         f_score = metric.compute(average="macro")
         acc_score = acc.compute()
         print("Validation: ", f_score, acc_score)
-        print(confusion_matrix(labels, preds))
+        # print(confusion_matrix(labels, preds))
     exit(0)
     # model.config.hidden_dropout_prob = 0.85
     run_name = f"{selected_model}-{dataset_name}"
